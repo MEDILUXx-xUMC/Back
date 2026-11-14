@@ -1,0 +1,17 @@
+{
+  "items": [
+    {
+      "productId": "product-keyboard",
+      "track": "RENTAL",
+      "title": "기계식 키보드 (저소음 적축)",
+      "categoryId": "keyboard",
+      "thumbnailUrl": null,
+      "neighborhoodName": "사우동",
+      "distanceMeters": 400,
+      "isFirstExperience": true,
+      "depositAmount": 45000,
+      "dailyFeeAmount": 2000
+    }
+  ],
+  "nextCursor": null
+}
