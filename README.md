@@ -1,83 +1,96 @@
-# Back
-This is back-end repository
+# 한번만 백엔드
 
-## 프로젝트 초기 구조
+동네 이웃 간 전자제품 대여와 미개봉 생활용품 거래를 지원하는 REST API다. 제품 탐색부터 문고리 수령·반납까지 두 개발 계정으로 확인할 수 있다.
 
-- [FE·BE API 계약 초안](docs/API_CONTRACT.md)
-- [폴더 구조와 구현 순서](docs/PROJECT_SETUP.md)
-- [백엔드 구현 계획](docs/IMPLEMENTATION_PLAN.md)
+**기술 스택** · Java 21, Spring Boot 3.5.16, Gradle Wrapper 8.14.3, PostgreSQL 17, Flyway
 
 ## 로컬 실행
 
-JDK 21과 Docker를 실행할 수 있는 환경에서 아래 명령을 사용한다.
+JDK 21과 Docker Compose가 필요하다. Docker를 실행한 뒤 Back 저장소 루트에서 아래 명령을 실행한다.
 
 ```powershell
 docker compose up -d --wait
 .\gradlew.bat bootRun --args="--spring.profiles.active=local"
 ```
 
-macOS와 Linux에서는 `bash gradlew bootRun --args='--spring.profiles.active=local'`로 실행한다. 로컬 프로필은 PostgreSQL에 예시 데이터를 적용하고 제품 조회에 개발용 사용자를 사용한다.
+macOS와 Linux에서는 두 번째 명령으로 `./gradlew bootRun --args='--spring.profiles.active=local'`을 사용한다.
+
+- API 기본 주소는 `http://127.0.0.1:8080/api/v1`이다.
+- PostgreSQL은 `127.0.0.1:5432`에서 실행된다. 서버가 시작될 때 Flyway가 스키마와 로컬 예시 데이터를 적용한다.
+- 로컬 CORS는 `http://localhost:5173`과 `http://127.0.0.1:5173`을 허용한다.
+- 서버를 종료하려면 터미널에서 `Ctrl+C`를 누른다. `docker compose stop`으로 DB를 중지하면 데이터 볼륨은 유지된다.
+
+## 첫 API 호출
 
 ```powershell
-curl.exe "http://127.0.0.1:8080/api/v1/products?rentalDays=2&budgetAmount=50000"
-curl.exe "http://127.0.0.1:8080/api/v1/products/product-keyboard"
+$api = "http://127.0.0.1:8080/api/v1"
+
+# 예산 49,000원으로 이틀간 이용할 수 있는 제품 조회
+Invoke-RestMethod "$api/products?rentalDays=2&budgetAmount=49000"
+
+# 빌리는 이웃으로 로그인하고 프로필 조회
+$login = Invoke-RestMethod "$api/auth/session" -Method Post -ContentType "application/json" -Body '{"userId":"demo-borrower"}'
+$headers = @{ Authorization = "Bearer $($login.accessToken)" }
+Invoke-RestMethod "$api/me" -Headers $headers
 ```
 
-`.\gradlew.bat build`로 컴파일과 검사를 실행한다. DB를 끌 때는 `docker compose stop`을 사용한다.
+로컬 제품 목록·상세 조회는 토큰을 생략하면 `demo-borrower`로 동작한다. 거래를 확인할 때는 빌리는 이웃 `demo-borrower`와 주인 `demo-owner`의 토큰을 각각 발급받는다. 토큰은 8시간 유효하다. [두 계정으로 대여·판매 확인하기](docs/LOCAL_API.md)
 
-제품 등록, 거래, 온보딩, 마이·채팅은 [로컬 API 검증 방법](docs/LOCAL_API.md)을 참고한다.
+## 구현된 기능
 
-## BE 협업 규칙
+경로의 공통 접두사는 `/api/v1`이다.
 
-### 1. 첫 작업과 담당 범위
+| 기능 | 대표 API | 동작 |
+| --- | --- | --- |
+| 제품과 카테고리 | `GET /products`, `GET /products/{productId}`, `POST /products`, `GET /categories`, `GET /me/products` | 예산·사용 일수·동네 반경 조회, 커서 페이지 이동, 트랙별 품목 검증과 등록 |
+| 온보딩 | `POST /auth/session`, `GET /me`, `GET /policies`, `POST /me/consents`, `POST /me/neighborhood-verifications` | 개발 세션, 약관 동의, 좌표 기반 동네 확인, 다음 단계 조회 |
+| 제품·거래 사진 | `POST /uploads`, `GET /uploads/{id}` | PNG·JPEG를 파일당 5MB까지 저장하고 거래 사진의 참여자 권한 확인 |
+| 대여와 판매 | `POST /trade-quotes`, `POST /trades`, `GET /trades`, `GET /trades/{id}` | 견적, 중복 요청 처리, 수락·거절, 사진 등록, 수령·반납 확인, 취소·분쟁 접수·후기 |
+| 결제 | `GET /me/payment-methods`, `POST /me/payment-method-registration`, `GET /trades/{id}/payment` | 로컬 결제수단과 모의 보류·해제·결제 결과 |
+| 마이와 채팅 | `GET /me/stats`, `GET /me/experiences`, `GET /chats`, `GET/POST /chats/{id}/messages`, `PUT /chats/{id}/read` | 통계·첫 경험, 거래 역할별 채팅 목록, 텍스트·사진 전송과 읽음 처리 |
 
-- 첫 기능 작업 전에 BE 팀이 언어·프레임워크, DB, 빌드 도구, 로컬 실행·검사·마이그레이션 명령을 정한다. 초기 설정은 담당자 한 명이 PR로 올리고, 병합된 `main`을 기준으로 각 기능 브랜치를 만든다.
-- 작업 목록에 **기능명, 담당자, API 문서, 영향받는 FE 화면, 변경할 공통 코드나 DB, 선행 작업, PR 링크**를 기록한다. FE 화면이 연결되면 Figma 번호와 화면명으로 찾을 수 있게 적는다.
-- 기능마다 담당자 한 명이 요청 검증부터 응답과 테스트까지 챙긴다. 여러 기능에 영향을 주는 변경은 수정할 사람과 병합 순서를 먼저 정한다.
+[화면별 API 계약과 요청·응답 필드](docs/API_CONTRACT.md)
 
-| 작업 범위 | 담당 기준 |
-| --- | --- |
-| 기능별 API와 비즈니스 로직 | 기능 담당자가 메서드·경로, 입력 검증, 동작, 응답을 함께 관리한다. |
-| 공통 인증·인가, 오류 응답, 공통 설정 | 변경마다 담당자 한 명을 정하고 영향을 받는 API와 FE 화면을 작업 목록에 적는다. |
-| DB 스키마와 마이그레이션 | 같은 테이블이나 관계를 수정하는 작업자끼리 변경 범위와 실행 순서를 먼저 맞춘다. |
-| 빌드 설정과 의존성 | 변경 담당자가 설정과 관련 파일을 함께 수정하고, 실행 환경이나 명령이 달라지면 PR에 적는다. |
+## 코드 구조
 
-### 2. 공통 코드와 DB를 변경할 때
+```text
+src/main/java/com/hanbeonman/
+├── catalog/      제품 조회·등록, 카테고리
+├── identity/     세션, 정책 동의, 동네 인증
+├── trade/        견적, 거래 상태 전이, 참여 권한
+├── upload/       이미지 저장·조회, 용도 검증
+├── payment/      로컬 결제수단 등록과 조회
+├── profile/      이용 통계와 첫 경험
+├── chat/         거래별 메시지와 읽음 위치
+└── common/       HTTP 오류, 입력 검증, CORS
 
-1. 수정 전에 팀 채널에 **바꿀 파일이나 테이블, 변경 내용, 영향받는 API·화면, 선행 PR**을 공유한다. 같은 곳을 수정하는 사람이 있으면 한 사람이 공통 부분을 맡고 나머지 작업의 병합 순서를 정한다.
-2. 여러 기능이 같은 변경을 기다리면 공통 변경을 작은 PR로 먼저 올린다. 먼저 병합해도 기존 호출이 정상 동작하는지 확인한다. 호출 방식도 함께 바뀌어야 하면 영향받는 호출부를 같은 PR에서 수정한다.
-3. DB 구조 변경은 프로젝트에서 정한 마이그레이션 방식으로 기록한다. 컬럼을 필수로 바꾸거나 삭제·이름 변경이 필요하면 기존 데이터가 있는 상태에서 적용해 보고, 데이터 채우기와 앱 배포가 필요한 순서를 PR에 적는다. 공유 환경에 이미 적용한 마이그레이션의 수정 사항은 후속 마이그레이션에 담는다.
-4. 설정값이 추가되면 변수 이름과 예시를 실행 문서나 예시 설정에 적는다. 실제 비밀번호, 토큰, 접속 정보는 실행 환경의 설정으로 주입한다.
+src/main/resources/
+├── application.yaml        공통 설정
+├── application-local.yaml  로컬 서버와 DB 설정
+└── db/
+    ├── migration/          공통 스키마·정책 마이그레이션
+    └── local/              로컬 개발용 사용자·제품·결제수단
+```
 
-### 3. FE와 합의할 API 계약
+## 환경 설정과 연동 범위
 
-- BE 기능 담당자와 FE 화면 담당자가 구현·연동 전에 같은 API 문서를 확인한다. 문서에는 **HTTP 메서드와 경로, 인증·권한, 요청 필드, 성공 상태 코드와 응답 예시, 오류 상태 코드와 응답 예시**를 기록한다. 필수·선택, 필드 생략과 `null`의 의미, 허용 값과 범위도 필요한 필드에 명시한다.
-- 목록 API에는 빈 목록 예시를 포함한다. 페이지 구분이 있으면 요청값, 기본 정렬, 다음 페이지 판단 기준을 문서에 적는다. 배열이 중첩된 경우에도 실제 반환 구조와 같은 예시를 사용한다.
-- BE는 요청을 검증하고 필요한 인증·권한을 서버에서 확인한다. 공통 오류 본문과 상태 코드 사용 기준은 첫 API 작업에서 FE와 한 번 맞추고 같은 형식을 재사용한다. FE가 오류 종류에 따라 다르게 동작해야 하면 분기에 사용할 코드도 문서에 명시한다.
+| 환경 변수 | 역할 | `local` 기본값 |
+| --- | --- | --- |
+| `DB_URL` | PostgreSQL JDBC 주소 | `jdbc:postgresql://127.0.0.1:5432/hanbeonman` |
+| `DB_USERNAME` | DB 사용자 | `hanbeonman` |
+| `DB_PASSWORD` | DB 비밀번호 | Compose와 동일한 로컬 개발용 값 |
+| `SERVER_PORT` | API 포트 | `8080` |
 
-| 데이터 | FE·BE 공통 기준 |
-| --- | --- |
-| JSON 키 | `camelCase`를 사용한다. 예시는 `productId`, `depositAmount`, `rentalDays`다. |
-| 금액 | 원 단위 정수 JSON 숫자로 주고받는다. 예를 들어 `15000`을 전달하고 화면에서 `₩15,000`으로 표시한다. |
-| 날짜 | 달력 날짜는 `YYYY-MM-DD`로 주고받는다. 예시는 `2026-11-14`다. |
-| 시각 | 시간대를 포함한 ISO 8601 문자열을 사용한다. 예시는 `2026-11-14T03:30:00Z`다. 화면에서 `Asia/Seoul` 기준으로 변환해 표시한다. |
+기본 프로필에서는 DB 연결 값 세 개를 실행 환경에서 주입한다. 개발 계정 로그인과 모의 결제 처리는 `local` 프로필에서 제공한다. 동네 확인은 입력 좌표와 동네 기준점의 거리를 계산하고, 사진은 PostgreSQL에 저장한다. 채팅은 HTTP로 조회한다. 실제 인증·지도·PG·파일 저장소 및 운영용 연체·분쟁 처리 기준은 후속 연동 범위다.
 
-### 4. API 변경과 Mock 연동
+## 빌드와 협업
 
-1. BE 담당자는 구현 전 API 문서에 변경안과 응답 예시를 적고 FE 담당자에게 공유한다. **변경되는 필드나 상태 코드, 영향받는 화면, 기존 FE와의 호환 여부, 적용할 환경과 시점**을 함께 확인한다.
-2. 필드 삭제·이름 변경, 타입 변경, 필수 입력 추가처럼 기존 FE가 깨지는 변경은 이전 형식을 함께 지원할 수 있는지 확인한다. 가능하면 새 형식을 제공하는 BE 배포 → FE 전환 → 이전 형식 제거 순서로 진행한다. 두 형식을 함께 지원하기 어려우면 전환 일정을 합의하고 작업 목록에 적는다.
-3. BE는 구현과 응답 예시를 맞추고, FE는 같은 문서를 기준으로 API 함수, 요청·응답 타입, Mock을 함께 갱신한다. 양쪽 PR에 같은 API 문서를 연결하고, 상대 PR이 생기면 연결해 선행 작업과 배포 순서를 확인할 수 있게 한다.
-4. 연동할 때는 실제 BE 응답으로 정상 흐름과 화면이 사용하는 빈 결과·검증 오류·인증 오류를 확인한다. 응답이 문서나 Mock과 다르면 합의한 계약을 기준으로 수정할 담당자를 정하고 다시 확인한다.
+```powershell
+.\gradlew.bat build
+```
 
-### 5. 브랜치, 리뷰, 병합
+macOS와 Linux에서는 `./gradlew build`를 실행한다. API 변경 시 동일 조건의 성공·오류 응답을 로컬 서버에서 확인한다.
 
-1. 최신 `main`에서 기능별 브랜치를 만든다. 예시는 `feat/product-list`, `fix/rental-validation`이다. PR 하나에 작업 목록의 변경 목적 하나를 담는다.
-2. PR에 작업 링크, 변경 내용, 영향받는 API와 FE 화면, 확인 방법을 적는다. API나 DB가 바뀌면 명세와 응답 예시, 마이그레이션 방법, 선행 PR이나 배포 순서도 해당되는 항목에 적는다.
-3. 다른 BE 한 명의 리뷰를 받는다. 작성자는 프로젝트에 설정된 빌드·검사를 실행하고, 변경한 API의 성공 응답과 변경에 관련된 잘못된 입력·권한 오류를 확인한다. DB 변경은 기존 데이터가 있는 환경에서 적용 결과도 확인한다.
-4. 병합 전에 작업 브랜치에 최신 `main`을 반영하고 영향을 받은 검사를 다시 실행한다. 동기화 과정에서 리뷰받은 동작이 바뀌면 그 부분을 다시 리뷰받는다. 선행 PR, 리뷰, 검사가 끝나면 `main`에 병합한다.
-
-### 6. 충돌이 났을 때
-
-1. PR 작성자가 작업 브랜치에서 충돌을 해결한다. 공통 파일이나 같은 테이블을 수정했다면 각 담당자와 변경 의도, 최종 동작, 적용 순서를 먼저 맞춘다.
-2. 같은 API의 경로나 응답이 서로 달라졌으면 API 문서와 FE 사용처를 확인해 최종 계약을 합의한다. 마이그레이션이 충돌하면 이미 적용된 이력을 기준으로 새 마이그레이션의 식별자, 적용 순서와 스키마를 확인한다.
-3. 충돌을 해소한 뒤 빌드·검사, 관련 API 동작과 필요한 마이그레이션 검증을 다시 수행한다. PR에 충돌을 해결한 파일과 결정한 동작을 적고, FE 계약이 달라졌다면 양쪽 PR과 API 문서에 반영한다.
+- [BE 협업 규칙](docs/CONTRIBUTING.md)
+- [프로젝트 구조와 연동 순서](docs/PROJECT_SETUP.md)
+- [백엔드 구현 계획](docs/IMPLEMENTATION_PLAN.md)
