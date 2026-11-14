@@ -1,6 +1,11 @@
 # Back
 This is back-end repository
 
+## 프로젝트 초기 구조
+
+- [FE·BE API 계약 초안](docs/API_CONTRACT.md)
+- [폴더 구조와 구현 순서](docs/PROJECT_SETUP.md)
+
 ## BE 협업 규칙
 
 ### 1. 첫 작업과 담당 범위
