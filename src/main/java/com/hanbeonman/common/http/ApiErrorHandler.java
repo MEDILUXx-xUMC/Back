@@ -11,6 +11,7 @@ import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 class ApiErrorHandler {
@@ -36,6 +37,11 @@ class ApiErrorHandler {
         log.error("Request processing failed", error);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new Body("INTERNAL_ERROR", "요청을 처리할 수 없어요.", Map.of()));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ResponseEntity<Body> handleLargeFile() {
+        return handleApiError(new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "UPLOAD_TOO_LARGE", "사진은 5MB 이하여야 해요."));
     }
 
     record Body(String code, String message, @JsonInclude(JsonInclude.Include.NON_EMPTY) Map<String, String> fieldErrors) {}

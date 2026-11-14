@@ -25,6 +25,8 @@ curl.exe "http://127.0.0.1:8080/api/v1/products/product-keyboard"
 
 `.\gradlew.bat build`로 컴파일과 검사를 실행한다. DB를 끌 때는 `docker compose stop`을 사용한다.
 
+제품 등록, 거래, 온보딩, 마이·채팅은 [로컬 API 검증 방법](docs/LOCAL_API.md)을 참고한다.
+
 ## BE 협업 규칙
 
 ### 1. 첫 작업과 담당 범위

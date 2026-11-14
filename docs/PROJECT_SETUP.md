@@ -8,6 +8,12 @@ Back/
     catalog/        제품 HTTP 진입점, 조회 서비스, SQL과 응답
     common/config/  로컬 FE의 CORS 설정
     common/http/    공통 오류 응답
+    identity/       세션, 동네와 정책 동의
+    payment/        결제수단과 로컬 등록
+    trade/          견적, 상태 전이와 참여자 권한
+    upload/         이미지 저장과 접근 제어
+    profile/        이용 통계와 첫 경험
+    chat/           거래별 메시지와 읽음
   src/main/resources/
     db/migration/  배포 환경 공통 스키마
     db/local/      로컬 프로필 전용 데이터

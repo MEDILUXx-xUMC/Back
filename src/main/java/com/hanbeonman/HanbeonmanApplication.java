@@ -3,8 +3,10 @@ package com.hanbeonman;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
+@EnableScheduling
 public class HanbeonmanApplication {
     public static void main(String[] args) {
         SpringApplication.run(HanbeonmanApplication.class, args);

@@ -1,4 +1,4 @@
-// 로컬 Vite 서버의 제품 API 요청을 허용한다.
+// 로컬 Vite 서버의 API 요청을 허용한다.
 package com.hanbeonman.common.config;
 
 import org.springframework.context.annotation.Configuration;
@@ -11,8 +11,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 class LocalCorsConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/v1/products/**")
+        registry.addMapping("/api/v1/**")
                 .allowedOrigins("http://localhost:5173", "http://127.0.0.1:5173")
-                .allowedMethods("GET");
+                .allowedMethods("GET", "POST", "PUT", "DELETE")
+                .allowedHeaders("Authorization", "Content-Type", "Idempotency-Key");
     }
 }

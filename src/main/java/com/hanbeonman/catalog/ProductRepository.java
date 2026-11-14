@@ -30,6 +30,9 @@ class ProductRepository {
     private static final String LIST = CANDIDATES + """
             SELECT * FROM candidates
             WHERE distance_meters <= :radius
+              AND NOT EXISTS (SELECT 1 FROM trades t WHERE t.product_id=candidates.id
+                  AND (t.status NOT IN ('COMPLETED','REJECTED','CANCELED')
+                       OR candidates.track='SEALED_SALE' AND t.status='COMPLETED'))
               AND (NOT :applyBudget OR CASE track
                   WHEN 'RENTAL' THEN deposit_amount + daily_fee_amount::numeric * :rentalDays
                   ELSE sale_price_amount
@@ -78,6 +81,13 @@ class ProductRepository {
                 .param("productId", productId)
                 .query((result, row) -> mapProduct(result))
                 .optional();
+    }
+
+    List<Product> mine(String userId, String neighborhoodId, String after, int limit) {
+        return jdbc.sql(CANDIDATES + """
+                SELECT * FROM candidates WHERE owner_id=:userId AND id>:after ORDER BY id LIMIT :limit
+                """).param("userId",userId).param("neighborhoodId",neighborhoodId)
+                .param("after",after).param("limit",limit).query((row,index) -> mapProduct(row)).list();
     }
 
     private JdbcClient.StatementSpec scopedQuery(String sql, String userId, String neighborhoodId, int radius) {

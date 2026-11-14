@@ -35,7 +35,17 @@ class ProductService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "제품을 찾을 수 없어요."));
     }
 
-    private String neighborhood(String userId) {
+    ProductResponse.Page mine(String userId, String cursor) {
+        String neighborhood = neighborhood(userId);
+        var conditions = new ProductCursor.Conditions(userId, neighborhood, null, 0);
+        var position = cursors.decode(cursor, conditions);
+        var results = products.mine(userId, neighborhood, position.productId(), PAGE_SIZE + 1);
+        var items = results.stream().limit(PAGE_SIZE).map(ProductResponse::detail).toList();
+        String next = results.size() > PAGE_SIZE ? cursors.encode(conditions, results.get(PAGE_SIZE - 1)) : null;
+        return new ProductResponse.Page(items, next);
+    }
+
+    String neighborhood(String userId) {
         return products.findNeighborhood(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN,
                         "NEIGHBORHOOD_VERIFICATION_REQUIRED", "동네를 인증해 주세요."));
