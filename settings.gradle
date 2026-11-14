@@ -1,0 +1,2 @@
+// Gradle 프로젝트 이름을 정의한다.
+rootProject.name = 'hanbeonman-back'

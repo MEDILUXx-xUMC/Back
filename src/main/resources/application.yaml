@@ -1,0 +1,15 @@
+# 공통 서버와 운영 DB 연결 설정이다.
+spring:
+  application:
+    name: hanbeonman-back
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+  jackson:
+    deserialization:
+      accept-float-as-int: false

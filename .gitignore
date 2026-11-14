@@ -1,0 +1,6 @@
+# Gradle 출력과 개발 환경 파일을 제외한다.
+.gradle/
+build/
+.idea/
+*.iml
+.env
