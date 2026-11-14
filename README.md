@@ -5,6 +5,25 @@ This is back-end repository
 
 - [FE·BE API 계약 초안](docs/API_CONTRACT.md)
 - [폴더 구조와 구현 순서](docs/PROJECT_SETUP.md)
+- [백엔드 구현 계획](docs/IMPLEMENTATION_PLAN.md)
+
+## 로컬 실행
+
+JDK 21과 Docker를 실행할 수 있는 환경에서 아래 명령을 사용한다.
+
+```powershell
+docker compose up -d --wait
+.\gradlew.bat bootRun --args="--spring.profiles.active=local"
+```
+
+macOS와 Linux에서는 `bash gradlew bootRun --args='--spring.profiles.active=local'`로 실행한다. 로컬 프로필은 PostgreSQL에 예시 데이터를 적용하고 제품 조회에 개발용 사용자를 사용한다.
+
+```powershell
+curl.exe "http://127.0.0.1:8080/api/v1/products?rentalDays=2&budgetAmount=50000"
+curl.exe "http://127.0.0.1:8080/api/v1/products/product-keyboard"
+```
+
+`.\gradlew.bat build`로 컴파일과 검사를 실행한다. DB를 끌 때는 `docker compose stop`을 사용한다.
 
 ## BE 협업 규칙
 

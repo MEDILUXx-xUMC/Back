@@ -1,9 +1,16 @@
 # BE 프로젝트 초기 구조
 
-언어, 프레임워크, DB, 인증과 PG 공급자를 정할 때 아래 모듈 경계를 해당 프레임워크의 관례에 매핑한다. 현재 저장소에는 FE와 같이 리뷰할 [API 계약](API_CONTRACT.md)과 공통 응답 예시가 있다.
+초기 구현은 Java 21, Spring Boot, Gradle Wrapper, PostgreSQL, Flyway를 사용한다. [README](../README.md)의 명령으로 제품 조회 API를 실행하고, [API 계약](API_CONTRACT.md)의 응답 형식을 확인한다.
 
 ```text
 Back/
+  src/main/java/com/hanbeonman/
+    catalog/        제품 HTTP 진입점, 조회 서비스, SQL과 응답
+    common/config/  로컬 FE의 CORS 설정
+    common/http/    공통 오류 응답
+  src/main/resources/
+    db/migration/  배포 환경 공통 스키마
+    db/local/      로컬 프로필 전용 데이터
   docs/
     API_CONTRACT.md
     PROJECT_SETUP.md
@@ -12,6 +19,8 @@ Back/
       product-list.json
       validation-error.json
 ```
+
+기본 프로필의 DB 연결은 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`로 받는다. 인증 공급자 연동 전 기본 프로필의 제품 조회는 인증된 서버 Principal을 요구한다. `local` 프로필은 루프백 주소에 바인딩하고, 예시 사용자와 Vite의 `5173` 포트에서 연결할 수 있다.
 
 | 초기화 이후 모듈 | 책임과 병합 경계 |
 | --- | --- |
